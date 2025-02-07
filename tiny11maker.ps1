@@ -144,6 +144,8 @@ $packagesToRemove = $packages | Where-Object {
     $packagePrefixes -contains ($packagePrefixes | Where-Object { $packageName -like "$_*" })
 }
 foreach ($package in $packagesToRemove) {
+	$command = "dism /English /image:$($ScratchDisk)\scratchdir /Remove-ProvisionedAppxPackage /PackageName:$package"
+    Write-Output "Executing: $command"
     & 'dism' '/English' "/image:$($ScratchDisk)\scratchdir" '/Remove-ProvisionedAppxPackage' "/PackageName:$package"
 }
 
