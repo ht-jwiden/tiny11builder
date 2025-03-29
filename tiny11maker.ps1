@@ -1,6 +1,9 @@
 # Enable debugging
 #Set-PSDebug -Trace 1
 
+# Used as an alternate to Clear-Host to keep track of things.
+$divider = "`n" + ("#" * 50) + "`n" + ("#" * 10 + " SECTION DIVIDER " + "#" * 10) + "`n" + ("#" * 50) + "`n"
+
 param (
     [ValidatePattern('^[c-zC-Z]$')]
     [string]$ScratchDisk
@@ -45,10 +48,14 @@ if (! $myWindowsPrincipal.IsInRole($adminRole))
 
 
 # Start the transcript and prepare the window
-Start-Transcript -Path "$ScratchDisk\tiny11.log" 
+#Start-Transcript -Path "$ScratchDisk\tiny11.log" 
+
+#Fix for `Transcription cannot be started due to the error: The process cannot access the file` error.
+$logFilePath = "$ScratchDisk\tiny11_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+Start-Transcript -Path $logFilePath
 
 $Host.UI.RawUI.WindowTitle = "Tiny11 image creator"
-Clear-Host
+Write-Host $divider -ForegroundColor Red
 Write-Host "Welcome to the tiny11 image creator! Release: 05-06-24 - Modified by JDW 2-7-2025"
 
 $hostArchitecture = $Env:PROCESSOR_ARCHITECTURE
@@ -84,7 +91,7 @@ Set-ItemProperty -Path "$ScratchDisk\tiny11\sources\install.esd" -Name IsReadOnl
 Remove-Item "$ScratchDisk\tiny11\sources\install.esd" > $null 2>&1
 Write-Host "Copy complete!"
 Start-Sleep -Seconds 2
-Clear-Host
+Write-Host $divider -ForegroundColor Red
 Write-Host "Getting image information:"
 Get-WindowsImage -ImagePath $ScratchDisk\tiny11\sources\install.wim
 $index = Read-Host "Please enter the image index"
@@ -186,7 +193,7 @@ Write-Host "Removing OneDrive:"
 Remove-Item -Path "$ScratchDisk\scratchdir\Windows\System32\OneDriveSetup.exe" -Force | Out-Null
 Write-Host "Removal complete!"
 Start-Sleep -Seconds 2
-Clear-Host
+Write-Host $divider -ForegroundColor Red
 Write-Host "Loading registry..."
 reg load HKLM\zCOMPONENTS $ScratchDisk\scratchdir\Windows\System32\config\COMPONENTS | Out-Null
 reg load HKLM\zDEFAULT $ScratchDisk\scratchdir\Windows\System32\config\default | Out-Null
@@ -382,7 +389,9 @@ reg unload HKLM\zSCHEMA | Out-Null
 reg unload HKLM\zSOFTWARE
 reg unload HKLM\zSYSTEM | Out-Null
 Write-Host "Cleaning up image..."
-Repair-WindowsImage -Path $ScratchDisk\scratchdir -StartComponentCleanup -ResetBase
+#Repair-WindowsImage -Path $ScratchDisk\scratchdir -StartComponentCleanup -ResetBase
+# Fix for "Repair-WindowsImage : A parameter cannot be found that matches parameter name 'StartComponentCleanup'." Error
+& 'dism' '/English' "/image:$ScratchDisk\scratchdir" '/Cleanup-Image' '/StartComponentCleanup' '/ResetBase' | Out-Null
 Write-Host "Cleanup complete."
 Write-Host ' '
 Write-Host "Unmounting image..."
@@ -394,7 +403,7 @@ Remove-Item -Path "$ScratchDisk\tiny11\sources\install.wim" -Force | Out-Null
 Rename-Item -Path "$ScratchDisk\tiny11\sources\install2.wim" -NewName "install.wim" | Out-Null
 Write-Host "Windows image completed. Continuing with boot.wim."
 Start-Sleep -Seconds 2
-Clear-Host
+Write-Host $divider -ForegroundColor Red
 Write-Host "Mounting boot image:"
 $wimFilePath = "$ScratchDisk\tiny11\sources\boot.wim" 
 & takeown "/F" $wimFilePath | Out-Null
@@ -431,7 +440,7 @@ reg unload HKLM\zSOFTWARE
 reg unload HKLM\zSYSTEM | Out-Null
 Write-Host "Unmounting image..."
 Dismount-WindowsImage -Path $ScratchDisk\scratchdir -Save
-Clear-Host
+Write-Host $divider -ForegroundColor Red
 Write-Host "The tiny11 image is now completed. Proceeding with the making of the ISO..."
 Write-Host "Copying unattended file for bypassing MS account on OOBE..."
 Copy-Item -Path "$PSScriptRoot\autounattend.xml" -Destination "$ScratchDisk\tiny11\autounattend.xml" -Force | Out-Null
